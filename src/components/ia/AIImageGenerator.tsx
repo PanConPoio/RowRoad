@@ -25,7 +25,7 @@ export default function Component({ onImageGenerated }: AIImageGeneratorProps = 
     setIsGenerating(true)
     try {
       const formattedPrompt = encodeURIComponent(prompt)
-      const response = await fetch(`http://192.168.1.11:9080/generate/image/prompt=${formattedPrompt}`, {
+      const response = await fetch(`http://192.168.2.41:9080/generate/image/prompt=${formattedPrompt}`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
