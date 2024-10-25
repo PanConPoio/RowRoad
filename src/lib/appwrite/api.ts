@@ -21,6 +21,7 @@ export async function createUserAccount(user: INewUser) {
     const newUser = await saveUserToDB({
       accountId: newAccount.$id,
       name: newAccount.name,
+      phone: newAccount.phone,
       email: newAccount.email,
       username: user.username,
       imageUrl: avatarUrl,
@@ -37,6 +38,7 @@ export async function createUserAccount(user: INewUser) {
 export async function saveUserToDB(user: {
   accountId: string;
   email: string;
+  phone: string;
   name: string;
   imageUrl: URL;
   username?: string;
@@ -116,28 +118,19 @@ export async function signOutAccount() {
 // ============================== CREATE POST
 export async function createPost(post: INewPost) {
   try {
-    // Asumimos que post.file es un array con un solo archivo
     const file = post.file[0];
     if (!file) throw Error("No se ha seleccionado ningún archivo");
-
-    // Subir el archivo a Appwrite Storage
     const uploadedFile = await uploadFile(file);
     if (!uploadedFile) throw Error;
-
-    // Obtener la URL del archivo
     const fileUrl = getFilePreview(uploadedFile.$id);
     if (!fileUrl) {
       await deleteFile(uploadedFile.$id);
       throw Error;
     }
-
-    // Determinar si el archivo es una imagen o un video
     const isVideo = file.type.startsWith('video/');
 
-    // Convertir tags en array
     const tags = post.tags?.replace(/ /g, "").split(",") || [];
 
-    // Crear el documento del post
     const newPost = await databases.createDocument(
       appwriteConfig.databaseId,
       appwriteConfig.postCollectionId,
@@ -272,11 +265,8 @@ export async function updatePost(post: IUpdatePost) {
     let mediaId = post.mediaId;
 
     if (hasFileToUpdate) {
-      // Subir el nuevo archivo a Appwrite Storage
       const uploadedFile = await uploadFile(post.file[0]);
       if (!uploadedFile) throw Error;
-
-      // Obtener la URL del nuevo archivo
       const fileUrl = getFilePreview(uploadedFile.$id);
       if (!fileUrl) {
         await deleteFile(uploadedFile.$id);
@@ -286,16 +276,10 @@ export async function updatePost(post: IUpdatePost) {
       mediaUrl = fileUrl;
       mediaId = uploadedFile.$id;
     }
-
-    // Determinar si el archivo es una imagen o un video
     const mediaType = hasFileToUpdate
       ? post.file[0].type.startsWith('video/') ? 'video' : 'image'
       : post.mediaType;
-
-    // Convertir tags en array
     const tags = post.tags?.replace(/ /g, "").split(",") || [];
-
-    // Actualizar el documento del post
     const updatedPost = await databases.updateDocument(
       appwriteConfig.databaseId,
       appwriteConfig.postCollectionId,
@@ -309,16 +293,12 @@ export async function updatePost(post: IUpdatePost) {
         tags: tags,
       }
     );
-
-    // Si la actualización falló, eliminar el nuevo archivo si se subió uno
     if (!updatedPost) {
       if (hasFileToUpdate) {
         await deleteFile(mediaId);
       }
       throw Error;
     }
-
-    // Si se subió un nuevo archivo, eliminar el archivo antiguo
     if (hasFileToUpdate && post.mediaId) {
       await deleteFile(post.mediaId);
     }
@@ -444,9 +424,7 @@ export async function getRecentPosts() {
   }
 }
 
-// ============================================================
 // USER
-// ============================================================
 
 // ============================== GET USERS
 export async function getUsers(limit?: number) {
@@ -495,11 +473,8 @@ export async function updateUser(user: IUpdateUser) {
     };
 
     if (hasFileToUpdate) {
-      // Upload new file to appwrite storage
       const uploadedFile = await uploadFile(user.file[0]);
       if (!uploadedFile) throw Error;
-
-      // Get new file url
       const fileUrl = getFilePreview(uploadedFile.$id);
       if (!fileUrl) {
         await deleteFile(uploadedFile.$id);
@@ -508,8 +483,6 @@ export async function updateUser(user: IUpdateUser) {
 
       image = { ...image, imageUrl: fileUrl, imageId: uploadedFile.$id };
     }
-
-    //  Update user
     const updatedUser = await databases.updateDocument(
       appwriteConfig.databaseId,
       appwriteConfig.userCollectionId,
@@ -522,17 +495,13 @@ export async function updateUser(user: IUpdateUser) {
       }
     );
 
-    // Failed to update
     if (!updatedUser) {
-      // Delete new file that has been recently uploaded
       if (hasFileToUpdate) {
         await deleteFile(image.imageId);
       }
-      // If no new file uploaded, just throw error
       throw Error;
     }
 
-    // Safely delete old file after successful update
     if (user.imageId && hasFileToUpdate) {
       await deleteFile(user.imageId);
     }
@@ -543,7 +512,7 @@ export async function updateUser(user: IUpdateUser) {
   }
 }
 
-// Función para seguir a un usuario
+//FOLLOWERS
 export async function seguirUsuario(followerId: string, followedId: string) {
   try {
     const nuevoSeguidor = await databases.createDocument(
@@ -562,7 +531,7 @@ export async function seguirUsuario(followerId: string, followedId: string) {
   }
 }
 
-// Función para dejar de seguir a un usuario
+// UNFOLLOW
 export async function dejarDeSeguirUsuario(followerId: string, followedId: string) {
   try {
     const relaciones = await databases.listDocuments(
@@ -588,7 +557,6 @@ export async function dejarDeSeguirUsuario(followerId: string, followedId: strin
   }
 }
 
-// Función para obtener los seguidores de un usuario
 export async function obtenerSeguidores(userId: string) {
   try {
     const seguidores = await databases.listDocuments(
@@ -603,7 +571,6 @@ export async function obtenerSeguidores(userId: string) {
   }
 }
 
-// Función para obtener a quienes sigue un usuario
 export async function obtenerSeguidos(userId: string) {
   try {
     const seguidos = await databases.listDocuments(
@@ -638,6 +605,7 @@ export async function createComment(postId: string, userId: string, content: str
   }
 }
 
+//COMMENTS
 export async function getComments(postId: string) {
   try {
     const comments = await databases.listDocuments(
@@ -646,7 +614,6 @@ export async function getComments(postId: string) {
       [Query.equal("post_id", postId), Query.orderDesc("created_at")]
     );
     
-    // Obtener información del usuario para cada comentario
     const commentsWithUserInfo = await Promise.all(comments.documents.map(async (comment) => {
       const user = await getUserById(comment.user_id);
       if (user) {
