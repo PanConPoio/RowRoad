@@ -25,6 +25,7 @@ const SignupForm = () => {
     defaultValues: {
       name: "",
       username: "",
+      phone: "",
       email: "",
       password: "",
     },
@@ -103,6 +104,19 @@ const SignupForm = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Usuario</FormLabel>
+                <FormControl>
+                  <Input type="text" className="shad-input" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Numero de Telefono</FormLabel>
                 <FormControl>
                   <Input type="text" className="shad-input" {...field} />
                 </FormControl>
